@@ -10,15 +10,28 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthorizeRouteImport } from './routes/authorize'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PIdRouteImport } from './routes/p.$id'
 import { Route as ApiVocabImageRouteImport } from './routes/api/vocab-image'
 import { Route as ApiTestKeyRouteImport } from './routes/api/test-key'
 import { Route as ApiLessonRouteImport } from './routes/api/lesson'
+import { Route as ApiOauthTokenRouteImport } from './routes/api/oauth/token'
+import { Route as ApiOauthRegisterRouteImport } from './routes/api/oauth/register'
+import { Route as ApiOauthProtectedResourceRouteImport } from './routes/api/oauth/protected-resource'
+import { Route as ApiOauthAuthorizeRouteImport } from './routes/api/oauth/authorize'
+import { Route as ApiOauthAuthorizationServerRouteImport } from './routes/api/oauth/authorization-server'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -26,9 +39,19 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthorizeRoute = AuthorizeRouteImport.update({
+  id: '/authorize',
+  path: '/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PIdRoute = PIdRouteImport.update({
+  id: '/p/$id',
+  path: '/p/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiVocabImageRoute = ApiVocabImageRouteImport.update({
@@ -46,66 +69,149 @@ const ApiLessonRoute = ApiLessonRouteImport.update({
   path: '/api/lesson',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOauthTokenRoute = ApiOauthTokenRouteImport.update({
+  id: '/api/oauth/token',
+  path: '/api/oauth/token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOauthRegisterRoute = ApiOauthRegisterRouteImport.update({
+  id: '/api/oauth/register',
+  path: '/api/oauth/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOauthProtectedResourceRoute =
+  ApiOauthProtectedResourceRouteImport.update({
+    id: '/api/oauth/protected-resource',
+    path: '/api/oauth/protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOauthAuthorizeRoute = ApiOauthAuthorizeRouteImport.update({
+  id: '/api/oauth/authorize',
+  path: '/api/oauth/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOauthAuthorizationServerRoute =
+  ApiOauthAuthorizationServerRouteImport.update({
+    id: '/api/oauth/authorization-server',
+    path: '/api/oauth/authorization-server',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/authorize': typeof AuthorizeRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/register': typeof RegisterRoute
   '/api/lesson': typeof ApiLessonRoute
   '/api/test-key': typeof ApiTestKeyRoute
   '/api/vocab-image': typeof ApiVocabImageRoute
+  '/p/$id': typeof PIdRoute
+  '/api/oauth/authorization-server': typeof ApiOauthAuthorizationServerRoute
+  '/api/oauth/authorize': typeof ApiOauthAuthorizeRoute
+  '/api/oauth/protected-resource': typeof ApiOauthProtectedResourceRoute
+  '/api/oauth/register': typeof ApiOauthRegisterRoute
+  '/api/oauth/token': typeof ApiOauthTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/authorize': typeof AuthorizeRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/register': typeof RegisterRoute
   '/api/lesson': typeof ApiLessonRoute
   '/api/test-key': typeof ApiTestKeyRoute
   '/api/vocab-image': typeof ApiVocabImageRoute
+  '/p/$id': typeof PIdRoute
+  '/api/oauth/authorization-server': typeof ApiOauthAuthorizationServerRoute
+  '/api/oauth/authorize': typeof ApiOauthAuthorizeRoute
+  '/api/oauth/protected-resource': typeof ApiOauthProtectedResourceRoute
+  '/api/oauth/register': typeof ApiOauthRegisterRoute
+  '/api/oauth/token': typeof ApiOauthTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/authorize': typeof AuthorizeRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/register': typeof RegisterRoute
   '/api/lesson': typeof ApiLessonRoute
   '/api/test-key': typeof ApiTestKeyRoute
   '/api/vocab-image': typeof ApiVocabImageRoute
+  '/p/$id': typeof PIdRoute
+  '/api/oauth/authorization-server': typeof ApiOauthAuthorizationServerRoute
+  '/api/oauth/authorize': typeof ApiOauthAuthorizeRoute
+  '/api/oauth/protected-resource': typeof ApiOauthProtectedResourceRoute
+  '/api/oauth/register': typeof ApiOauthRegisterRoute
+  '/api/oauth/token': typeof ApiOauthTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/authorize'
     | '/login'
+    | '/mcp'
     | '/register'
     | '/api/lesson'
     | '/api/test-key'
     | '/api/vocab-image'
+    | '/p/$id'
+    | '/api/oauth/authorization-server'
+    | '/api/oauth/authorize'
+    | '/api/oauth/protected-resource'
+    | '/api/oauth/register'
+    | '/api/oauth/token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/authorize'
     | '/login'
+    | '/mcp'
     | '/register'
     | '/api/lesson'
     | '/api/test-key'
     | '/api/vocab-image'
+    | '/p/$id'
+    | '/api/oauth/authorization-server'
+    | '/api/oauth/authorize'
+    | '/api/oauth/protected-resource'
+    | '/api/oauth/register'
+    | '/api/oauth/token'
   id:
     | '__root__'
     | '/'
+    | '/authorize'
     | '/login'
+    | '/mcp'
     | '/register'
     | '/api/lesson'
     | '/api/test-key'
     | '/api/vocab-image'
+    | '/p/$id'
+    | '/api/oauth/authorization-server'
+    | '/api/oauth/authorize'
+    | '/api/oauth/protected-resource'
+    | '/api/oauth/register'
+    | '/api/oauth/token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthorizeRoute: typeof AuthorizeRoute
   LoginRoute: typeof LoginRoute
+  McpRoute: typeof McpRoute
   RegisterRoute: typeof RegisterRoute
   ApiLessonRoute: typeof ApiLessonRoute
   ApiTestKeyRoute: typeof ApiTestKeyRoute
   ApiVocabImageRoute: typeof ApiVocabImageRoute
+  PIdRoute: typeof PIdRoute
+  ApiOauthAuthorizationServerRoute: typeof ApiOauthAuthorizationServerRoute
+  ApiOauthAuthorizeRoute: typeof ApiOauthAuthorizeRoute
+  ApiOauthProtectedResourceRoute: typeof ApiOauthProtectedResourceRoute
+  ApiOauthRegisterRoute: typeof ApiOauthRegisterRoute
+  ApiOauthTokenRoute: typeof ApiOauthTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -117,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -124,11 +237,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/authorize': {
+      id: '/authorize'
+      path: '/authorize'
+      fullPath: '/authorize'
+      preLoaderRoute: typeof AuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$id': {
+      id: '/p/$id'
+      path: '/p/$id'
+      fullPath: '/p/$id'
+      preLoaderRoute: typeof PIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/vocab-image': {
@@ -152,16 +279,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLessonRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/oauth/token': {
+      id: '/api/oauth/token'
+      path: '/api/oauth/token'
+      fullPath: '/api/oauth/token'
+      preLoaderRoute: typeof ApiOauthTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/oauth/register': {
+      id: '/api/oauth/register'
+      path: '/api/oauth/register'
+      fullPath: '/api/oauth/register'
+      preLoaderRoute: typeof ApiOauthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/oauth/protected-resource': {
+      id: '/api/oauth/protected-resource'
+      path: '/api/oauth/protected-resource'
+      fullPath: '/api/oauth/protected-resource'
+      preLoaderRoute: typeof ApiOauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/oauth/authorize': {
+      id: '/api/oauth/authorize'
+      path: '/api/oauth/authorize'
+      fullPath: '/api/oauth/authorize'
+      preLoaderRoute: typeof ApiOauthAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/oauth/authorization-server': {
+      id: '/api/oauth/authorization-server'
+      path: '/api/oauth/authorization-server'
+      fullPath: '/api/oauth/authorization-server'
+      preLoaderRoute: typeof ApiOauthAuthorizationServerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthorizeRoute: AuthorizeRoute,
   LoginRoute: LoginRoute,
+  McpRoute: McpRoute,
   RegisterRoute: RegisterRoute,
   ApiLessonRoute: ApiLessonRoute,
   ApiTestKeyRoute: ApiTestKeyRoute,
   ApiVocabImageRoute: ApiVocabImageRoute,
+  PIdRoute: PIdRoute,
+  ApiOauthAuthorizationServerRoute: ApiOauthAuthorizationServerRoute,
+  ApiOauthAuthorizeRoute: ApiOauthAuthorizeRoute,
+  ApiOauthProtectedResourceRoute: ApiOauthProtectedResourceRoute,
+  ApiOauthRegisterRoute: ApiOauthRegisterRoute,
+  ApiOauthTokenRoute: ApiOauthTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

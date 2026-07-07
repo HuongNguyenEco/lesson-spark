@@ -13,10 +13,23 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  // Already signed in? Bounce to the app.
+  // Where to go after auth: a same-origin `next` param (used by /authorize) or home.
+  function redirectAfterAuth() {
+    if (typeof window !== "undefined") {
+      const next = new URLSearchParams(window.location.search).get("next");
+      if (next && next.startsWith("/")) {
+        window.location.assign(next);
+        return;
+      }
+    }
+    navigate({ to: "/" });
+  }
+
+  // Already signed in? Bounce onward.
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/" });
-  }, [loading, user, navigate]);
+    if (!loading && user) redirectAfterAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,12 +44,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       if (mode === "login") {
         const { error } = await signIn(email.trim(), password);
         if (error) setErr(error);
-        else navigate({ to: "/" });
+        else redirectAfterAuth();
       } else {
         const { error, needsConfirm } = await signUp(email.trim(), password);
         if (error) setErr(error);
         else if (needsConfirm) setInfo("Check your inbox to confirm your email, then log in.");
-        else navigate({ to: "/" });
+        else redirectAfterAuth();
       }
     } finally {
       setBusy(false);

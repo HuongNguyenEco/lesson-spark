@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
 import { useAuth } from "./auth";
+import { BADGES } from "./lesson-types";
 
 export type Quest = { id: string; done: boolean };
 export type Progress = {
@@ -24,6 +25,37 @@ export const DEFAULT_PROGRESS: Progress = {
 };
 
 const STORAGE_KEY = "lumi:progress:v1";
+
+/** Pure XP application: adds XP, updates the daily streak, and awards
+ * threshold badges. Shared by the main app and the preview page so scoring
+ * behaves identically everywhere. */
+export function applyXp(prev: Progress, amount: number): Progress {
+  if (amount <= 0) return prev;
+  const today = new Date().toISOString().slice(0, 10);
+  const newBadges = new Set(prev.badges);
+  const newXp = prev.xp + amount;
+  let streak = prev.streak;
+  if (prev.lastActive !== today) {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    streak = prev.lastActive === yesterday ? prev.streak + 1 : 1;
+  }
+  BADGES.forEach((b) => {
+    if (b.xp > 0 && newXp >= b.xp) newBadges.add(b.id);
+  });
+  if (streak >= 3) newBadges.add("streak3");
+  if (newXp > 0) newBadges.add("first");
+  return { ...prev, xp: newXp, streak, lastActive: today, badges: Array.from(newBadges) };
+}
+
+export function markQuest(prev: Progress, id: string): Progress {
+  return prev.quests.some((q) => q.id === id && !q.done)
+    ? { ...prev, quests: prev.quests.map((q) => (q.id === id ? { ...q, done: true } : q)) }
+    : prev;
+}
+
+export function addBadge(prev: Progress, id: string): Progress {
+  return prev.badges.includes(id) ? prev : { ...prev, badges: [...prev.badges, id] };
+}
 
 type Row = {
   xp: number;

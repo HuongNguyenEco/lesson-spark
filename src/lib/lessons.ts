@@ -3,6 +3,8 @@ import { supabase } from "./supabase";
 import { useAuth } from "./auth";
 import type { Lesson } from "./lesson-types";
 
+export type Visibility = "private" | "public";
+
 export type LessonRecord = {
   id: string;
   title: string;
@@ -10,8 +12,31 @@ export type LessonRecord = {
   level: string | null;
   source: string | null;
   data: Lesson;
+  visibility: Visibility;
   created_at: string;
 };
+
+const COLUMNS = "id, title, topic, level, source, data, visibility, created_at";
+
+/** Fetch a single lesson by id (respects RLS: owner or public). */
+export async function fetchLesson(id: string): Promise<LessonRecord | null> {
+  const { data, error } = await supabase
+    .from("lessons")
+    .select(COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) {
+    console.error("[lessons] fetchLesson failed:", error.message);
+    return null;
+  }
+  return (data as LessonRecord | null) ?? null;
+}
+
+/** Update a lesson's share visibility (owner only, enforced by RLS). */
+export async function setLessonVisibility(id: string, visibility: Visibility): Promise<string | null> {
+  const { error } = await supabase.from("lessons").update({ visibility }).eq("id", id);
+  return error ? error.message : null;
+}
 
 /**
  * Saved-lesson history backed by the Supabase `lessons` table (RLS: own rows).
@@ -30,7 +55,7 @@ export function useLessonHistory() {
     setLoading(true);
     const { data, error } = await supabase
       .from("lessons")
-      .select("id, title, topic, level, source, data, created_at")
+      .select(COLUMNS)
       .order("created_at", { ascending: false })
       .limit(100);
     setLoading(false);
@@ -59,7 +84,7 @@ export function useLessonHistory() {
           source: source.slice(0, 4000),
           data: lesson,
         })
-        .select("id, title, topic, level, source, data, created_at")
+        .select(COLUMNS)
         .single();
       if (error) {
         console.error("[lessons] save failed:", error.message);
