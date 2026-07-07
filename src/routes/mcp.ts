@@ -7,11 +7,12 @@ import type { Lesson } from "@/lib/lesson-types";
 const CORS: Record<string, string> = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "POST, GET, OPTIONS",
-  "access-control-allow-headers": "content-type, authorization, mcp-protocol-version",
-  "access-control-expose-headers": "www-authenticate",
+  "access-control-allow-headers": "content-type, authorization, mcp-protocol-version, mcp-session-id, accept",
+  "access-control-expose-headers": "www-authenticate, mcp-session-id",
 };
 
 const PROTOCOL_VERSION = "2025-06-18";
+const SUPPORTED_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const SERVER_INFO = { name: "lumi", title: "Lumi ESL", version: "1.0.0" };
 
 const TOOLS = [
@@ -51,11 +52,28 @@ const TOOLS = [
 export const Route = createFileRoute("/mcp")({
   server: {
     handlers: {
-      OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
-      GET: async () => new Response("Method Not Allowed", { status: 405, headers: { ...CORS, allow: "POST" } }),
+      OPTIONS: async () =>
+        new Response(null, {
+          status: 204,
+          headers: { ...CORS, "access-control-allow-headers": "content-type, authorization, mcp-protocol-version, mcp-session-id, accept" },
+        }),
+      // Some clients (Claude) open a GET SSE stream for server→client messages.
+      // We're stateless: return an empty, immediately-closing SSE stream so the
+      // client is satisfied rather than treating a 405 as an error.
+      GET: async ({ request }) => {
+        const accept = request.headers.get("accept") || "";
+        if (accept.includes("text/event-stream")) {
+          return new Response(": ok\n\n", {
+            status: 200,
+            headers: { ...CORS, "content-type": "text/event-stream", "cache-control": "no-cache" },
+          });
+        }
+        return new Response("Method Not Allowed", { status: 405, headers: { ...CORS, allow: "POST" } });
+      },
       POST: async ({ request }) => {
         const base = serverBaseUrl(request);
         const wwwAuth = `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource"`;
+        const wantsSse = (request.headers.get("accept") || "").includes("text/event-stream");
 
         const token = getBearer(request);
         const auth = token ? await resolveAccessToken(token) : null;
@@ -66,24 +84,31 @@ export const Route = createFileRoute("/mcp")({
           });
         }
 
-        let msg: JsonRpcRequest;
+        let payload: unknown;
         try {
-          msg = (await request.json()) as JsonRpcRequest;
+          payload = await request.json();
         } catch {
-          return rpcError(null, -32700, "Parse error");
+          return rpcError(null, -32700, "Parse error", wantsSse);
         }
 
+        // JSON-RPC batch support (arrays).
+        if (Array.isArray(payload)) {
+          const responses = [];
+          for (const m of payload as JsonRpcRequest[]) {
+            if (m && m.id !== undefined && m.id !== null) {
+              responses.push(await handleOne(m, auth.user_id, base));
+            }
+          }
+          if (responses.length === 0) return new Response(null, { status: 202, headers: CORS });
+          return encode(responses, wantsSse);
+        }
+
+        const msg = payload as JsonRpcRequest;
         // Notifications (no id) get an empty 202.
-        if (msg.id === undefined || msg.id === null) {
+        if (!msg || msg.id === undefined || msg.id === null) {
           return new Response(null, { status: 202, headers: CORS });
         }
-
-        try {
-          const result = await handle(msg, auth.user_id, base);
-          return rpcResult(msg.id, result);
-        } catch (e) {
-          return rpcError(msg.id, -32603, e instanceof Error ? e.message : "Internal error");
-        }
+        return encode(await handleOne(msg, auth.user_id, base), wantsSse, msg.method === "initialize");
       },
     },
   },
@@ -91,15 +116,29 @@ export const Route = createFileRoute("/mcp")({
 
 type JsonRpcRequest = { jsonrpc: "2.0"; id?: string | number | null; method: string; params?: Record<string, unknown> };
 
+/** Run one request and wrap it as a JSON-RPC response object (never throws). */
+async function handleOne(msg: JsonRpcRequest, userId: string, base: string) {
+  try {
+    const result = await handle(msg, userId, base);
+    return { jsonrpc: "2.0" as const, id: msg.id ?? null, result };
+  } catch (e) {
+    return { jsonrpc: "2.0" as const, id: msg.id ?? null, error: { code: -32603, message: e instanceof Error ? e.message : "Internal error" } };
+  }
+}
+
 async function handle(msg: JsonRpcRequest, userId: string, base: string): Promise<unknown> {
   switch (msg.method) {
-    case "initialize":
+    case "initialize": {
+      // Echo the client's protocol version when it's one we know; else ours.
+      const requested = String((msg.params as Record<string, unknown> | undefined)?.protocolVersion ?? "");
+      const protocolVersion = SUPPORTED_VERSIONS.includes(requested) ? requested : PROTOCOL_VERSION;
       return {
-        protocolVersion: PROTOCOL_VERSION,
+        protocolVersion,
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER_INFO,
         instructions: "Lumi turns any topic into a gamified English lesson. Use create_lesson to make one, get_preview_link to share it.",
       };
+    }
     case "tools/list":
       return { tools: TOOLS };
     case "ping":
@@ -207,16 +246,27 @@ async function callTool(name: string, args: Record<string, unknown>, userId: str
   }
 }
 
-function rpcResult(id: string | number, result: unknown) {
-  return new Response(JSON.stringify({ jsonrpc: "2.0", id, result }), {
-    status: 200,
-    headers: { ...CORS, "content-type": "application/json" },
-  });
+/** Encode a JSON-RPC response as SSE (when the client accepts it) or JSON.
+ *  On initialize we also hand back a Mcp-Session-Id for clients that want one. */
+function encode(body: unknown, wantsSse: boolean, isInit = false): Response {
+  const headers: Record<string, string> = { ...CORS };
+  if (isInit) headers["mcp-session-id"] = randomSessionId();
+  const text = JSON.stringify(body);
+  if (wantsSse) {
+    headers["content-type"] = "text/event-stream";
+    headers["cache-control"] = "no-cache";
+    return new Response(`event: message\ndata: ${text}\n\n`, { status: 200, headers });
+  }
+  headers["content-type"] = "application/json";
+  return new Response(text, { status: 200, headers });
 }
 
-function rpcError(id: string | number | null, code: number, message: string) {
-  return new Response(JSON.stringify({ jsonrpc: "2.0", id, error: { code, message } }), {
-    status: 200,
-    headers: { ...CORS, "content-type": "application/json" },
-  });
+function rpcError(id: string | number | null, code: number, message: string, wantsSse = false) {
+  return encode({ jsonrpc: "2.0", id, error: { code, message } }, wantsSse);
+}
+
+function randomSessionId(): string {
+  const a = new Uint8Array(16);
+  crypto.getRandomValues(a);
+  return Array.from(a, (b) => b.toString(16).padStart(2, "0")).join("");
 }
